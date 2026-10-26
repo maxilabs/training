@@ -11,12 +11,22 @@ spec:
   # Alleen uit deze repo mag gesynct worden. Een Application met een andere repoURL faalt.
   sourceRepos:
     - https://github.com/maxilabs/training.git
+    # Helm-repo's die als chart-bron gebruikt worden door platform-Apps.
+    - https://charts.external-secrets.io
+    - https://openbao.github.io/openbao-helm
 
   # Waar de apps mogen landen. Namespace-patronen met * zijn toegestaan.
   # 'lab-external' bestaat pas nadat je hem met ./argocd.sh cluster add hebt geregistreerd.
   destinations:
     - name: lab-external
       namespace: multi-lab
+    # Platform-namespaces met een eigen leven (blok 9: secret management).
+    - server: https://kubernetes.default.svc
+      namespace: external-secrets
+    - server: https://kubernetes.default.svc
+      namespace: secrets-lab
+    - server: https://kubernetes.default.svc
+      namespace: secrets-team-*
     - server: https://kubernetes.default.svc
       namespace: web-*
     - server: https://kubernetes.default.svc

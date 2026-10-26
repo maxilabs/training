@@ -1,0 +1,34 @@
+# S-07 — templating: waarden combineren tot iets dat je app nodig heeft.
+#
+# Alles onder target.template wordt gerenderd met de Go-template-engine (engineVersion v2).
+# De opgehaalde waarden zijn bereikbaar als {{ .key }}. Handige functies: b64enc,
+# upper, default, printf, en (met Sprig) bijv. sha256sum.
+#
+# Let op: een template draait in de ESO-controller, dus de tussenwaarde staat kort in
+# het geheugen van die pod. Zet er nooit iets in dat naar een log kan lekken.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: app-config-templated
+  namespace: secrets-lab
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: azure-kv
+    kind: SecretStore
+  target:
+    name: app-config
+    creationPolicy: Merge
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      data:
+        # De app wil één URL, geen losse delen.
+        DATABASE_URL: "postgres://{{ .username }}:{{ .password }}@postgres.secrets-lab.svc:5432/app?sslmode=require"
+        API_KEY: "{{ .api_key }}"
+        SMTP_PASSWORD: "{{ .smtp_password | default \"geen-smtp-geconfigureerd\" }}"
+        # Een checksum is handig om een rollout af te dwingen als de waarde verandert.
+        CONFIG_CHECKSUM: "{{ .api_key | sha256sum }}"
+  dataFrom:
+    - extract:
+        key: app-config

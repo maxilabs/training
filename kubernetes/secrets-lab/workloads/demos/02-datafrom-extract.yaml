@@ -1,0 +1,25 @@
+# S-06 — alles in één keer: dataFrom in plaats van losse sleutels.
+#
+#   dataFrom.extract  -> haalt ALLE sleutels onder één Key Vault-secret op
+#   dataFrom.find     -> zoekt secrets in de vault op naam/tag (let op de rechten:
+#                        dit vraagt "list" op de vault, dus Key Vault Secrets User)
+#
+# extract gebruikt de JSON-vorm van een Key Vault-secret: staat er
+# {"username":"app","password":"s3cr3t"} in, dan worden dat twee sleutels.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: app-config
+  namespace: secrets-lab
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: azure-kv
+    kind: SecretStore
+  target:
+    name: app-config
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  dataFrom:
+    - extract:
+        key: app-config

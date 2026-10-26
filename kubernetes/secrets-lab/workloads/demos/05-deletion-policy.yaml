@@ -1,0 +1,48 @@
+# S-09 — deletionPolicy: wat gebeurt er met het Kubernetes Secret als de
+# ExternalSecret verdwijnt?
+#
+#   Retain  (veilig)  -> Secret blijft staan; jij ruimt het op
+#   Merge             -> Secret blijft, sleutels worden niet opgeruimd
+#   Delete            -> Secret wordt verwijderd (gevaarlijk: je app verliest zijn config)
+#
+# In git zet je dit bewust. De fout die je wilt voorkomen: per ongeluk een map uit git
+# verwijderen en daarmee de productieconfiguratie van je app opruimen.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: retain-demo
+  namespace: secrets-lab
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: azure-kv
+    kind: SecretStore
+  target:
+    name: retain-demo
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - secretKey: value
+      remoteRef:
+        key: app-config
+        property: api_key
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: delete-demo
+  namespace: secrets-lab
+spec:
+  refreshInterval: 1m
+  secretStoreRef:
+    name: azure-kv
+    kind: SecretStore
+  target:
+    name: delete-demo
+    creationPolicy: Owner
+    deletionPolicy: Delete
+  data:
+    - secretKey: value
+      remoteRef:
+        key: app-config
+        property: api_key

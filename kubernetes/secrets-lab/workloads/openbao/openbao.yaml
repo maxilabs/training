@@ -1,0 +1,59 @@
+# S-17 — OpenBao als Azure-vrije backend (optioneel lab).
+#
+# OpenBao is de open-source fork van HashiCorp Vault (MPL-2.0, Linux Foundation).
+# Deze variant draait in DEV-MODUS: alles in het geheugen, geen unseal, geen persistentie.
+# Perfect om de ESO-kant te leren, onbruikbaar in productie.
+#
+# Waarom dev-modus? Zonder dev-modus moet je Vault initialiseren, unsealen en opslaan;
+# dat is een eigen training. Hier telt alleen: ESO leest uit een Vault-achtige API.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openbao
+  namespace: secrets-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openbao
+  template:
+    metadata:
+      labels:
+        app: openbao
+    spec:
+      containers:
+        - name: openbao
+          image: quay.io/openbao/openbao:2.7.1
+          args:
+            - server
+            - -dev
+            # Root-token vastzetten zodat het lab deterministisch is. NOOIT in productie.
+            - -dev-root-token-id=root
+          ports:
+            - name: http
+              containerPort: 8200
+          readinessProbe:
+            httpGet:
+              path: /v1/sys/health?standbyok=true
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openbao
+  namespace: secrets-lab
+spec:
+  selector:
+    app: openbao
+  ports:
+    - name: http
+      port: 8200
+      targetPort: http

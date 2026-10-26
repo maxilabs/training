@@ -1,0 +1,28 @@
+# S-04 — het kleinste werkende voorbeeld.
+# Eén sleutel uit Azure Key Vault ("db-password") wordt één sleutel in een Kubernetes Secret.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: db-password
+  namespace: secrets-lab
+spec:
+  # Hoe vaak ESO de waarde opnieuw ophaalt. Kort zetten is handig om rotatie te zien;
+  # in productie is 1h vaak genoeg (Key Vault-secrets draaien niet elke minuut).
+  refreshInterval: 1m
+
+  secretStoreRef:
+    name: azure-kv
+    kind: SecretStore
+
+  target:
+    name: db-password
+    # Owner: dit Secret hoort bij deze ExternalSecret en verdwijnt mee.
+    creationPolicy: Owner
+    # Retain: als je de ExternalSecret weghaalt, blijft het Secret staan (lab S-09).
+    deletionPolicy: Retain
+
+  data:
+    - secretKey: password
+      remoteRef:
+        # Naam van het secret in Azure Key Vault.
+        key: db-password

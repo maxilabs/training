@@ -1,0 +1,10 @@
+# De namespace waar de lab-apps en hun ExternalSecrets leven.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secrets-lab
+  labels:
+    # Pod Security Admission: het lab draait gewone, niet-privileged workloads.
+    pod-security.kubernetes.io/enforce: baseline
+    # Nodig voor de ClusterSecretStore: die is alleen actief in namespaces met dit label.
+    secrets.maxilabs.dev/azure-kv: "true"

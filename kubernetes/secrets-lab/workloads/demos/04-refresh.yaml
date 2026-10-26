@@ -1,0 +1,27 @@
+# S-08 — rotatie zichtbaar maken.
+#
+#   refreshInterval: 30s   -> ESO kijkt elke 30 seconden of Key Vault een nieuwe versie heeft
+#   refreshPolicy: Periodic-> standaard; CreatedOnce zet je alleen bij secrets die nooit mogen wijzigen
+#
+# Wat ESO NIET doet: je Pod herstarten. Een Secret dat als env var is geïnjecteerd,
+# verandert pas bij een nieuwe Pod. Mount je het als volume, dan werkt Kubernetes het
+# bestand binnen ±1 minuut bij. Dat verschil is lab S-08.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: rotating
+  namespace: secrets-lab
+spec:
+  refreshInterval: 30s
+  refreshPolicy: Periodic
+  secretStoreRef:
+    name: azure-kv
+    kind: SecretStore
+  target:
+    name: rotating
+    creationPolicy: Owner
+    deletionPolicy: Retain
+  data:
+    - secretKey: value
+      remoteRef:
+        key: rotating-secret
