@@ -62,8 +62,10 @@ cmd_install() {
 }
 
 cmd_cli() {
-  command -v argocd >/dev/null 2>&1 && { log "argocd-CLI staat lokaal al: $(argocd version --client --short 2>/dev/null || true)"; }
-  if ! on_cp "command -v argocd >/dev/null 2>&1 && [ \"\$(argocd version --client --short 2>/dev/null | cut -d' ' -f2)\" = \"${ARGOCD_VERSION}\" ]"; then
+  # 'argocd version --short' geeft 'argocd: v3.5.6+<commit>': alleen de versie vergelijken.
+  if on_cp "command -v argocd >/dev/null 2>&1 && [ \"\$(argocd version --client --short 2>/dev/null | cut -d' ' -f2 | cut -d'+' -f1)\" = \"${ARGOCD_VERSION}\" ]"; then
+    log "argocd-CLI ${ARGOCD_VERSION} staat al op $CP_NODE"
+  else
     log "argocd-CLI ${ARGOCD_VERSION} installeren op $CP_NODE"
     on_cp "curl -fsSL --output=/tmp/argocd https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64
            sudo install -m 755 /tmp/argocd /usr/local/bin/argocd"
