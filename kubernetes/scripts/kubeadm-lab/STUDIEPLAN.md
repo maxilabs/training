@@ -23,6 +23,7 @@ Basis: officiële CKA-curriculum (Kubernetes v1.35), opgehaald 15-10-2026.
 | 5 | Troubleshooting (30%) | 12–16 u | INIT §3, §5 · L-19 t/m L-23, L-37 |
 | 6 | Examentraining | 8–12 u | killer.sh, Killercoda, herhaling |
 | 7 | Platform: GitOps + monitoring (geen CKA-stof, wel essentieel in de praktijk) | 10–14 u | L-24 t/m L-27 |
+| 9 | Secret management: ESO + Azure Key Vault (geen CKA-stof, wel dagelijkse praktijk) | 8–12 u | S-01 t/m S-20 |
 | 8 | IaC en CI/CD: clusters en resources uitrollen (lab, AKS, AKS op Azure Local; geen CKA-stof) | 10–14 u | INIT §8 · L-28 t/m L-32 |
 
 **Volgorde:** blok 0 → 1 → 2 → 3 → 4 → 5 → 6. Troubleshooting komt bewust na de andere blokken: je kunt pas
@@ -662,6 +663,61 @@ Docs: [Terraform](https://developer.hashicorp.com/terraform/docs) ·
 [AKS system node pools](https://learn.microsoft.com/en-us/azure/aks/use-system-pools) ·
 [Flux op AKS](https://learn.microsoft.com/en-us/azure/azure-arc/kubernetes/conceptual-gitops-flux2) ·
 [AKS Arc met Terraform](https://learn.microsoft.com/en-us/azure/aks/aksarc/create-clusters-terraform)
+
+---
+
+## Blok 9 — Secret management: ESO en Azure Key Vault
+
+Geen examenstof, wel het onderwerp waar de meeste incidenten en audits over gaan. Je leert secrets **buiten**
+git houden en ze toch declaratief beheren: een vault als bron van waarheid, een operator in het cluster die
+ze ophaalt, en git met alleen de verwijzing.
+
+**Concepten**
+
+🔗 **Alle begrippen van dit blok:** [secrets-lab/CONCEPTS.md](../../secrets-lab/CONCEPTS.md)
+
+- **Waarom:** een Kubernetes Secret is base64, geen encryptie; in git zetten is definitief
+  ([secret-hygiëne](../../secrets-lab/CONCEPTS.md#secret-hygiene)).
+- **ESO:** `SecretStore`/`ClusterSecretStore` (hoe kom ik bij de vault), `ExternalSecret` (wat naar welk Secret),
+  `PushSecret` (terug), `ClusterExternalSecret` (één definitie, veel namespaces).
+- **Azure Key Vault:** RBAC versus access policies, purge protection (verplicht door policy in deze landing zone),
+  private endpoints, en het verschil tussen secrets, keys en certificates.
+- **Identiteit:** service principal met client-secret (dit lab) versus workload identity (op AKS, niet hier — de
+  OIDC-issuer is niet publiek bereikbaar).
+- **Alternatieven:** [OpenBao/Vault, Sealed Secrets, SOPS, CSI-driver, Keycloak (geen vault, wel een IdP)](../../secrets-lab/ALTERNATIVES.md).
+
+**Labs** — volledige uitwerking in [secrets-lab/LABS.md](../../secrets-lab/LABS.md):
+
+| Labs | Wat |
+|---|---|
+| [S-01](../../secrets-lab/LABS.md#s-01) · [S-02](../../secrets-lab/LABS.md#s-02) | base64 is geen encryptie; landing zone uit de vending machine |
+| [S-03](../../secrets-lab/LABS.md#s-03) · [S-04](../../secrets-lab/LABS.md#s-04) | ESO installeren via Argo CD; eerste ExternalSecret |
+| [S-05](../../secrets-lab/LABS.md#s-05) · [S-06](../../secrets-lab/LABS.md#s-06) | ordening (`CreateContainerConfigError`); `dataFrom` |
+| [S-07](../../secrets-lab/LABS.md#s-07) · [S-08](../../secrets-lab/LABS.md#s-08) | templating; rotatie en refreshInterval |
+| [S-09](../../secrets-lab/LABS.md#s-09) · [S-10](../../secrets-lab/LABS.md#s-10) | deletionPolicy; drift |
+| [S-11](../../secrets-lab/LABS.md#s-11) · [S-12](../../secrets-lab/LABS.md#s-12) | ClusterExternalSecret; PushSecret |
+| [S-13](../../secrets-lab/LABS.md#s-13) · [S-14](../../secrets-lab/LABS.md#s-14) | foutmodes; least privilege met twee identiteiten |
+| [S-15](../../secrets-lab/LABS.md#s-15) · [S-16](../../secrets-lab/LABS.md#s-16) | workload identity (en waarom niet hier); CSI-driver |
+| [S-17](../../secrets-lab/LABS.md#s-17) · [S-18](../../secrets-lab/LABS.md#s-18) | OpenBao; de ExternalSecret in Argo CD |
+| [S-19](../../secrets-lab/LABS.md#s-19) · [S-20](../../secrets-lab/LABS.md#s-20) | monitoring; disaster recovery |
+
+```bash
+cd ~/kubernetes/scripts/kubeadm-lab
+./secrets.sh install      # ESO via Argo CD
+./secrets.sh azure init   # Key Vault + identiteiten + rollen
+./secrets.sh azure seed   # voorbeeldsecrets
+./secrets.sh stores       # SecretStore + ClusterSecretStore
+./secrets.sh status
+```
+
+**Resources:** ESO vraagt weinig (3 kleine pods); de Key Vault kost per 10k operaties. De landing zone komt uit de
+vending machine (`maxilabs/solutions`).
+
+Docs: [External Secrets Operator](https://external-secrets.io/) ·
+[Azure Key Vault-provider](https://external-secrets.io/latest/provider/azure-key-vault/) ·
+[Key Vault RBAC](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide) ·
+[Workload identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview) ·
+[OpenBao](https://openbao.org/)
 
 ---
 

@@ -42,6 +42,10 @@ Lees het begrip, doe dan de kleine praktische stap, en lees de bronnen op het mo
 AppProject, ApplicationSet, sync waves, hooks, SSO, notificaties, rollback, meerdere clusters, ...) staan in
 [gitops-lab/CONCEPTS.md](../../gitops-lab/CONCEPTS.md), met de labs in [gitops-lab/LABS.md](../../gitops-lab/LABS.md).
 
+**Blok 9 — Secret management:** de begrippen voor ESO, Azure Key Vault, service principals, workload identity en
+de alternatieven (OpenBao/Vault, Sealed Secrets, SOPS, CSI-driver) staan in
+[secrets-lab/CONCEPTS.md](../../secrets-lab/CONCEPTS.md), met de labs in [secrets-lab/LABS.md](../../secrets-lab/LABS.md).
+
 **Blok 8 — IaC en CI/CD: clusters en resources uitrollen:** [Het lagenmodel: wat doet IaC en wat doet GitOps](CONCEPTS.md#iac-lagen) ✅ · [Terraform: infrastructuur als code](CONCEPTS.md#terraform) ✅ · [Terraform-state en remote state](CONCEPTS.md#terraform-state) ✅ · [CI/CD-pipeline met GitHub Actions](CONCEPTS.md#ci-cd-pipeline) ✅ · [De pull-request-flow: plan op PR, apply na merge](CONCEPTS.md#pull-request-flow) ✅ · [OIDC-federatie: GitHub logt in bij Azure zonder secret](CONCEPTS.md#oidc-federatie) ✅ · [Self-hosted runner](CONCEPTS.md#self-hosted-runner) ✅ · [Push (CI/CD) vs pull (GitOps)](CONCEPTS.md#push-vs-pull) ✅ · [AKS: Azure Kubernetes Service](CONCEPTS.md#aks) ✅ · [AKS op Azure Local (AKS Arc)](CONCEPTS.md#aks-arc) ✅
 
 **Kubestronaut (CKAD, CKS):** [Pod Security Standards en Pod Security Admission](CONCEPTS.md#pod-security-admission) ✅ · [Admission control: controllers, policies en webhooks](CONCEPTS.md#admission-control) ✅ · [Downward API en projected volumes](CONCEPTS.md#downward-api) ✅ · [Vertical Pod Autoscaler en in-place resize](CONCEPTS.md#vpa-inplace-resize) ✅ · [Encryption at rest en KMS](CONCEPTS.md#encryption-at-rest) ✅ · [Audit logging](CONCEPTS.md#audit-logging) ✅ · [API-groepen, versies en deprecaties](CONCEPTS.md#api-versies) ✅

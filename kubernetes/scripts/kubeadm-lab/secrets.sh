@@ -24,7 +24,15 @@ cd "$(dirname "$0")"; source ./lab.env
 SECRETS_DIR="$(cd ../../secrets-lab && pwd)"
 GITOPS_DIR="$(cd ../../gitops-lab && pwd)"
 STATE_DIR="${HOME}/.config/secrets-lab"
-SP_ENV="${STATE_DIR}/azure-sp.env"
+VAULT_FILE="${STATE_DIR}/vault-name"
+
+# De landing zone heeft een Azure Policy (Deny) die purge protection verplicht.
+# Gevolg: een verwijderde vault houdt zijn naam 90 dagen vast. Daarom krijgt elke
+# installatie een unieke naam met een korte suffix; hij staat in $VAULT_FILE.
+kv_name() {
+  if [ -f "$VAULT_FILE" ]; then cat "$VAULT_FILE"; return; fi
+  printf '%s-%s' "$SECRETS_KV" "$(openssl rand -hex 2)"
+}
 
 on_cp() { vm_ssh "$CP_NODE" "$@"; }
 kc() { on_cp "kubectl $*"; }
@@ -36,7 +44,7 @@ cmd_lz() {
   log "landing zone voor het secrets-lab"
   printf 'subscription : %s\n' "$SECRETS_SUBSCRIPTION_ID"
   printf 'resource group: %s\n' "$SECRETS_RG"
-  printf 'key vault     : %s\n' "$SECRETS_KV"
+  printf 'key vault     : %s\n' "$(kv_name)"
   echo
   azs group show --name "$SECRETS_RG" --query '{naam:name,locatie:location,status:properties.provisioningState}' -o table 2>&1 || true
   echo
@@ -75,19 +83,24 @@ cmd_azure() {
 }
 
 ensure_kv() {
-  if azs keyvault show --name "$SECRETS_KV" >/dev/null 2>&1; then
-    log "Key Vault ${SECRETS_KV} bestaat al"
+  local kv; kv="$(kv_name)"
+  if azs keyvault show --name "$kv" >/dev/null 2>&1; then
+    log "Key Vault ${kv} bestaat al"
     return
   fi
-  log "Key Vault ${SECRETS_KV} aanmaken (RBAC-autorisatie, soft-delete 7 dagen)"
+  log "Key Vault ${kv} aanmaken (RBAC-autorisatie, purge protection AAN)"
+  # purge protection is verplicht door policy Enforce-GR-KeyVault (Deny).
+  # Daarom kan deze vault niet gepurged worden: de naam blijft 90 dagen bezet.
   azs keyvault create \
-    --name "$SECRETS_KV" \
+    --name "$kv" \
     --resource-group "$SECRETS_RG" \
     --location "$SECRETS_LOCATION" \
     --enable-rbac-authorization true \
+    --enable-purge-protection true \
     --retention-days 7 \
     --public-network-access Enabled \
     --query '{naam:name,rbac:properties.enableRbacAuthorization,purge:properties.enablePurgeProtection}' -o table
+  mkdir -p "$STATE_DIR"; printf '%s' "$kv" > "$VAULT_FILE"; chmod 600 "$VAULT_FILE"
 }
 
 # maak_sp <naam> <rol> <doel-namespace>
@@ -95,12 +108,15 @@ ensure_kv() {
 maak_sp() {
   local name="$1" role="$2"
   local app_id password
-  app_id="$(az ad app list --display-name "$name" --query '[0].appId' -o tsv)"
+  app_id="$(az ad app list --display-name "$name" --query '[?deletedDateTime==null]|[0].appId' -o tsv)"
   if [ -z "$app_id" ] || [ "$app_id" = "None" ]; then
     log "service principal ${name} aanmaken"
     az ad sp create-for-rbac --name "$name" --years 1 \
       --query '{appId:appId,password:password,tenant:tenant}' -o json > "${STATE_DIR}/${name}.json"
   else
+    # Een app-registratie kan bestaan zonder service principal (bijv. na een
+    # eerdere delete van alleen de SP). Zonder SP kun je geen rol toekennen.
+    az ad sp show --id "$app_id" >/dev/null 2>&1 || { log "service principal ontbreekt bij app ${app_id}: aanmaken"; az ad sp create --id "$app_id" >/dev/null; }
     log "service principal ${name} bestaat (${app_id}): nieuwe client-secret"
     az ad app credential reset --id "$app_id" --append --years 1 \
       --query '{appId:appId,password:password,tenant:tenant}' -o json > "${STATE_DIR}/${name}.json"
@@ -114,12 +130,12 @@ maak_sp() {
     # Lezen: secrets ophalen én de lijst kunnen zien (nodig voor dataFrom.find).
     azs role assignment create --role "$role" --assignee-object-id "$sp_object_id" \
       --assignee-principal-type ServicePrincipal \
-      --scope "$(azs keyvault show --name "$SECRETS_KV" --query id -o tsv)" \
+      --scope "$(azs keyvault show --name "$(kv_name)" --query id -o tsv)" \
       --query '{rol:roleDefinitionName,scope:scope}' -o table 2>/dev/null || log "rol bestond al"
   else
     azs role assignment create --role "$role" --assignee-object-id "$sp_object_id" \
       --assignee-principal-type ServicePrincipal \
-      --scope "$(azs keyvault show --name "$SECRETS_KV" --query id -o tsv)" \
+      --scope "$(azs keyvault show --name "$(kv_name)" --query id -o tsv)" \
       --query '{rol:roleDefinitionName,scope:scope}' -o table 2>/dev/null || log "rol bestond al"
   fi
 }
@@ -128,16 +144,30 @@ maak_sp() {
 # NIET in git, want het is zelf een secret. In productie vervang je dit door
 # workload identity (AKS) of door Sealed Secrets/SOPS voor deze ene secret.
 push_sp_secret() {
-  local name="$1" target_ns="$2"
+  local name="$1" secret_name="$2" target_ns="$3"
   local app_id password tenant
   app_id="$(jq -r .appId "${STATE_DIR}/${name}.json")"
   password="$(jq -r .password "${STATE_DIR}/${name}.json")"
   tenant="$(jq -r .tenant "${STATE_DIR}/${name}.json")"
-  on_cp "kubectl --namespace=${target_ns} create secret generic ${name} \
+  on_cp "kubectl --namespace=${target_ns} create secret generic ${secret_name} \
            --from-literal=ClientID='${app_id}' \
            --from-literal=ClientSecret='${password}' \
            --dry-run=client --output=yaml | kubectl apply --filename=-" >/dev/null
-  log "secret ${name} in namespace ${target_ns} bijgewerkt (ClientID ${app_id:0:8}…)"
+  log "secret ${secret_name} in namespace ${target_ns} bijgewerkt (ClientID ${app_id:0:8}…)"
+}
+
+# De maker van een RBAC-vault krijgt géén data-plane rechten. Dat is geen fout maar
+# het ontwerp: je moet jezelf expliciet 'Key Vault Secrets Officer' geven om te
+# kunnen seeden. Precies de reden dat ESO een eigen identiteit met eigen rollen heeft.
+grant_current_user() {
+  local oid kv_id
+  oid="$(az ad signed-in-user show --query id -o tsv 2>/dev/null || true)"
+  [ -n "$oid" ] || { log "let op: geen gebruikersobject gevonden; seed stap kan falen"; return 0; }
+  kv_id="$(azs keyvault show --name "$(kv_name)" --query id -o tsv)"
+  log "jezelf 'Key Vault Secrets Officer' geven op $(kv_name) (nodig om te seeden)"
+  azs role assignment create --role "Key Vault Secrets Officer" \
+    --assignee-object-id "$oid" --assignee-principal-type User \
+    --scope "$kv_id" --query 'roleDefinitionName' -o tsv 2>/dev/null || log "had je al"
 }
 
 azure_init() {
@@ -150,37 +180,38 @@ azure_init() {
 
   # De ClusterSecretStore leest het auth-secret uit de ESO-namespace;
   # de namespaced SecretStore uit secrets-lab. Beide vullen we.
-  push_sp_secret "sp-eso-k8s-reader" "$ESO_NAMESPACE"
-  push_sp_secret "sp-eso-k8s-reader" "$SECRETS_NAMESPACE"
-  push_sp_secret "sp-eso-k8s-writer" "$SECRETS_NAMESPACE"
+  push_sp_secret "sp-eso-k8s-reader" "azure-sp-reader" "$ESO_NAMESPACE"
+  push_sp_secret "sp-eso-k8s-reader" "azure-sp-reader" "$SECRETS_NAMESPACE"
+  push_sp_secret "sp-eso-k8s-writer" "azure-sp-writer" "$SECRETS_NAMESPACE"
 
+  grant_current_user
   log "klaar. Nu: ./secrets.sh azure seed && ./secrets.sh stores"
 }
 
 azure_seed() {
-  log "voorbeeldsecrets in ${SECRETS_KV} zetten"
-  azs keyvault secret set --vault-name "$SECRETS_KV" --name db-password \
+  log "voorbeeldsecrets in $(kv_name) zetten"
+  azs keyvault secret set --vault-name "$(kv_name)" --name db-password \
     --value "$(openssl rand -base64 24)" --query '{naam:name,versie:id}' -o table
   # Eén Key Vault-secret met JSON erin -> ESO 'extract' maakt er losse sleutels van.
-  azs keyvault secret set --vault-name "$SECRETS_KV" --name app-config \
+  azs keyvault secret set --vault-name "$(kv_name)" --name app-config \
     --value "$(jq -nc --arg u appuser --arg p "$(openssl rand -base64 18)" \
       --arg k "$(openssl rand -hex 16)" --arg s "$(openssl rand -base64 18)" \
       '{username:$u,password:$p,api_key:$k,smtp_password:$s}')" \
     --query '{naam:name}' -o table
-  azs keyvault secret set --vault-name "$SECRETS_KV" --name rotating-secret \
+  azs keyvault secret set --vault-name "$(kv_name)" --name rotating-secret \
     --value "start-$(date +%s)" --query '{naam:name}' -o table
   log "secretnamen in de vault"
-  azs keyvault secret list --vault-name "$SECRETS_KV" --query '[].name' -o tsv
+  azs keyvault secret list --vault-name "$(kv_name)" --query '[].name' -o tsv
 }
 
 # ── stores ────────────────────────────────────────────────────────────────────
 cmd_stores() {
   local tenant kv_url
   tenant="$(azs account show --query tenantId -o tsv)"
-  kv_url="https://${SECRETS_KV}.vault.azure.net"
-  log "SecretStore en ClusterSecretStore renderen (tenant ${tenant:0:8}…, vault ${SECRETS_KV})"
-  for f in secretstore-azurekv clustersecretstore-azurekv; do
-    sed -e "s#<KV_NAME>#${SECRETS_KV}#g" -e "s#<TENANT_ID>#${tenant}#g" \
+  kv_url="https://$(kv_name).vault.azure.net"
+  log "SecretStore en ClusterSecretStore renderen (tenant ${tenant:0:8}…, vault $(kv_name))"
+  for f in secretstore-azurekv secretstore-azurekv-writer clustersecretstore-azurekv; do
+    sed -e "s#<KV_NAME>#$(kv_name)#g" -e "s#<TENANT_ID>#${tenant}#g" \
       "${SECRETS_DIR}/stores/${f}.yaml" | on_cp "kubectl apply --filename=-"
   done
   log "status van de stores (VALID is wat je wilt zien)"
@@ -216,9 +247,9 @@ cmd_rotate() {
   log "client-secrets roteren (nieuwe credential, oude blijft tijdelijk geldig)"
   maak_sp "sp-eso-k8s-reader" "Key Vault Secrets User"
   maak_sp "sp-eso-k8s-writer" "Key Vault Secrets Officer"
-  push_sp_secret "sp-eso-k8s-reader" "$ESO_NAMESPACE"
-  push_sp_secret "sp-eso-k8s-reader" "$SECRETS_NAMESPACE"
-  push_sp_secret "sp-eso-k8s-writer" "$SECRETS_NAMESPACE"
+  push_sp_secret "sp-eso-k8s-reader" "azure-sp-reader" "$ESO_NAMESPACE"
+  push_sp_secret "sp-eso-k8s-reader" "azure-sp-reader" "$SECRETS_NAMESPACE"
+  push_sp_secret "sp-eso-k8s-writer" "azure-sp-writer" "$SECRETS_NAMESPACE"
   log "ESO pakt het nieuwe secret bij de volgende reconciliatie; forceer hem:"
   on_cp "kubectl --namespace=${ESO_NAMESPACE} rollout restart deployment/external-secrets >/dev/null
          kubectl --namespace=${ESO_NAMESPACE} rollout status deployment/external-secrets --timeout=180s"
@@ -256,8 +287,10 @@ cmd_reset() {
 cmd_destroy() {
   log "alles weg: lab-namespaces, Key Vault (purge), service principals"
   on_cp "kubectl delete namespace ${SECRETS_NAMESPACE} --ignore-not-found --wait=false"
-  azs keyvault delete --name "$SECRETS_KV" 2>/dev/null || log "vault bestond niet"
-  azs keyvault purge --name "$SECRETS_KV" 2>/dev/null || log "purge niet nodig"
+  # Purge protection staat aan (policy), dus purgen kan niet: de vault blijft 90
+  # dagen in soft-deleted staan en de naam is niet her te gebruiken.
+  azs keyvault delete --name "$(kv_name)" 2>/dev/null || log "vault bestond niet"
+  log "let op: $(kv_name) staat nu 90 dagen soft-deleted (purge protection, verplicht door policy)"
   for sp in sp-eso-k8s-reader sp-eso-k8s-writer; do
     local app_id
     app_id="$(az ad app list --display-name "$sp" --query '[0].appId' -o tsv)"

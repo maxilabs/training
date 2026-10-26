@@ -8,6 +8,7 @@ Overzicht van de documenten:
 - [INIT](INIT.md) — welke stappen je uitvoert om de omgeving op te zetten.
 - **SCRIPTS.md** (dit bestand) — wat de scripts onder water doen.
 - [gitops-lab/SCRIPTS.md](../../gitops-lab/SCRIPTS.md) — het Argo CD-script (blok 7), met dezelfde aanpak.
+- [secrets-lab/SCRIPTS.md](../../secrets-lab/SCRIPTS.md) — het secrets-script (blok 9), met dezelfde aanpak.
 
 De Kubernetes-begrippen achter de scripts: [kubeadm init](CONCEPTS.md#kubeadm-init) ·
 [kubeadm join](CONCEPTS.md#kubeadm-join) · [Container runtime en CRI](CONCEPTS.md#container-runtime) ·
@@ -276,6 +277,29 @@ aanmaken zonder dat Argo CD er al is. Alles wat *daarna* kan, staat in git (`git
 **Wat je hiervan moet kennen voor het examen/gesprek:** de installatiestappen, waarom `--server-side` nodig is
 (CRD's zijn te groot voor de `last-applied`-annotatie), dat `argocd-server` zelf TLS doet op 8080, en dat
 `argocd-initial-admin-secret` je eerste wachtwoord bevat.
+
+---
+
+## secrets.sh — ESO en Azure Key Vault (blok 9)
+
+**Wat en wanneer:** zet de External Secrets Operator in het cluster en regelt de Azure-kant (Key Vault, service
+principals, rollen). De labs staan in [secrets-lab/LABS.md](../../secrets-lab/LABS.md), de uitleg per
+subcommando in [secrets-lab/SCRIPTS.md](../../secrets-lab/SCRIPTS.md).
+
+| Commando | Wat het doet |
+|---|---|
+| `lz` | status van de landing zone (subscription, RG, VNet, vault) |
+| `install` | ESO 2.14.0 via Argo CD + namespace secrets-lab |
+| `azure init` | Key Vault + lees- en schrijf-identiteit + rollen + cluster-secrets |
+| `azure seed` | voorbeeldsecrets in de vault |
+| `stores` | SecretStore/ClusterSecretStore renderen en toepassen |
+| `status` / `debug <naam>` | overzicht / waarom is deze ExternalSecret niet klaar |
+| `rotate` | client-secrets roteren |
+| `openbao` | OpenBao (dev) als Azure-vrije backend |
+| `reset` / `destroy` | lab-objecten weg / ook vault en SP's weg |
+
+**Waarom een script:** Azure-resources, rollen en het bootstrap-credential kun je niet declaratief in git zetten
+zonder het geheim zelf in git te zetten. Het script is de handen; de ExternalSecrets en stores staan in git.
 
 ---
 

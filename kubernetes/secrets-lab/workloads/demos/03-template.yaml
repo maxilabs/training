@@ -17,8 +17,11 @@ spec:
     name: azure-kv
     kind: SecretStore
   target:
-    name: app-config
-    creationPolicy: Merge
+    # LET OP: niet dezelfde naam als 02-datafrom-extract.yaml. Twee ExternalSecrets
+    # die hetzelfde Secret willen beheren geven 'SecretOwnedByOther': één eigenaar
+    # per Secret. Dat is precies de fout die je in een echt cluster tegenkomt.
+    name: app-config-templated
+    creationPolicy: Owner
     deletionPolicy: Retain
     template:
       engineVersion: v2

@@ -57,10 +57,14 @@ spec:
               containerPort: 8080
           envFrom:
             # Alle sleutels uit dit Secret worden environment variables.
+            # We gebruiken het GERENDERDE secret (03-template.yaml): daar staan de
+            # namen in die de app verwacht (DATABASE_URL, API_KEY, SMTP_PASSWORD).
+            # Bij het ruwe 'app-config' heten ze api_key/smtp_password en dan zoekt
+            # je app naar namen die niet bestaan - een klassieke valkuil.
             # Bestaat het Secret (nog) niet, dan start de Pod niet:
             # CreateContainerConfigError. Dat is lab S-05.
             - secretRef:
-                name: app-config
+                name: app-config-templated
           resources:
             requests:
               cpu: 10m

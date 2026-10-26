@@ -11,6 +11,11 @@ Studiemap voor de CKA (Kubernetes v1.35), met een oefencluster van 3 VM's op ari
 | [INIT](INIT.md) | de lab-omgeving opzetten en resetten (VM's, cluster, CNI, add-ons) | je je lab wilt bouwen of herstellen |
 | [SCRIPTS](SCRIPTS.md) | wat de scripts onder water doen, met het handmatige equivalent | je wilt weten wat een script precies doet |
 
+Voor blok 9 (secret management) is er [secrets-lab](../../secrets-lab/README.md) met
+[LABS](../../secrets-lab/LABS.md) (S-01 t/m S-20), [CONCEPTS](../../secrets-lab/CONCEPTS.md),
+[SCRIPTS](../../secrets-lab/SCRIPTS.md) en [ALTERNATIVES](../../secrets-lab/ALTERNATIVES.md): External Secrets
+Operator met Azure Key Vault, plus een vergelijking met OpenBao/Vault, Sealed Secrets, SOPS en de CSI-driver.
+
 Voor blok 7 (GitOps) is er een eigen labmap: [gitops-lab](../../gitops-lab/README.md) met
 [LABS](../../gitops-lab/LABS.md) (G-01 t/m G-18), [CONCEPTS](../../gitops-lab/CONCEPTS.md) en
 [SCRIPTS](../../gitops-lab/SCRIPTS.md). Daar staat Argo CD als containers in ditzelfde cluster, met de manifests
