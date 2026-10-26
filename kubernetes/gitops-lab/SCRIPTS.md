@@ -142,6 +142,22 @@ kubectl delete crd applications.argoproj.io applicationsets.argoproj.io appproje
 `--cascade=orphan` laat de resources staan en ruimt alleen de Applications op: sneller en zonder
 finalizer-verrassingen. De namespaces gaan daarna expliciet weg.
 
+`uninstall` doet het in deze volgorde, en dat is niet toevallig:
+
+```bash
+# 1. finalizers van de Applications weghalen (anders blijft de namespace 'Terminating')
+kubectl -n argocd get applications -o name | while read -r app; do
+  kubectl -n argocd patch "$app" --type=merge -p '{"metadata":{"finalizers":null}}'
+done
+# 2. de namespace
+kubectl delete namespace argocd
+# 3. de CRD's
+kubectl delete crd applications.argoproj.io applicationsets.argoproj.io appprojects.argoproj.io
+```
+
+Zonder stap 1 verdwijnt de controller voordat hij de `resources-finalizer` kan afhandelen: de namespace blijft dan
+in `Terminating` hangen tot je de finalizers met de hand weghaalt.
+
 ## Snel opzoeken
 
 | Vraag | Commando |

@@ -275,7 +275,12 @@ cmd_reset() {
 
 cmd_uninstall() {
   log "Argo CD verwijderen (namespace argocd inclusief CRD's)"
-  on_cp "kubectl delete namespace argocd --ignore-not-found
+  # Eerst de finalizers van de Applications weghalen: hun controller verdwijnt zo meteen, dus
+  # niemand kan die finalizer nog afhandelen en de namespace blijft anders uren 'Terminating'.
+  on_cp "kubectl --namespace=argocd get applications --output=name 2>/dev/null | while read -r app; do
+           kubectl --namespace=argocd patch \"\$app\" --type=merge --patch='{\"metadata\":{\"finalizers\":null}}' >/dev/null 2>&1 || true
+         done
+         kubectl delete namespace argocd --ignore-not-found
          kubectl delete crd applications.argoproj.io applicationsets.argoproj.io appprojects.argoproj.io \
            imageupdaters.argocd-image-updater.argoproj.io --ignore-not-found"
 }

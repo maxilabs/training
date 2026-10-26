@@ -813,7 +813,7 @@ date
 date
 ```
 
-**Verificatie**
+**Verificatie** (gemeten op dit lab: installeren ±40 s, daarna ±30 s tot alle tien apps `Synced` + `Healthy`)
 - Alle apps uit `clusters/lab/apps` zijn terug en `Synced` + `Healthy`.
 - De web-pagina's, de Helm-release, de golven en de ApplicationSet-omgevingen bestaan weer.
 - Het admin-wachtwoord is **nieuw** (het oude secret is weg).
@@ -822,11 +822,19 @@ date
 `lab-external`. Dat is de les: alles wat je met de hand doet, moet je bij een herstel opnieuw doen. Zet zulke
 stappen in een script of in git.
 
+**Wat blijven staan** (en dat is de tweede les): resources die je bewust buiten git hield, zoals eentje met
+`Prune=false` uit G-14. Die zie je na herstel als `OutOfSync` terug — de nieuwe Argo CD kent ze wel (de
+tracking-annotatie staat er nog) maar vindt ze niet in git. Ruim ze zelf op, of zet ze in git.
+
 **Valkuilen**
 - Zonder `CreateNamespace=true` of een Namespace-manifest mislukt de eerste sync na herstel.
 - Als je root-app niet in git staat, is er niets om opnieuw te bootstrappen. Daarom staat
   `bootstrap/root-app.yaml` in deze repo.
 - `uninstall` verwijdert de CRD's; bestaande `Application`-objecten verdwijnen daarmee ook.
+- **Valkuil die je een uur kost:** verwijder je de namespace terwijl de Applications nog een
+  `resources-finalizer` hebben, dan blijft de namespace uren `Terminating` — er is immers geen controller meer om
+  die finalizer af te handelen. Het script haalt daarom eerst de finalizers weg (zie
+  [SCRIPTS](SCRIPTS.md#reset-en-uninstall)).
 
 🔗 **Begrippen:** [Disaster recovery](CONCEPTS.md#disaster-recovery) · [App-of-apps](CONCEPTS.md#app-of-apps) ·
 [Argo CD beheert zichzelf](CONCEPTS.md#self-management)
