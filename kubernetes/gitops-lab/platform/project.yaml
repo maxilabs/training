@@ -43,6 +43,15 @@ spec:
       kind: Namespace
     - group: apiextensions.k8s.io
       kind: CustomResourceDefinition
+    # Een operator zoals ESO heeft clusterbrede RBAC en een webhook nodig.
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
 
   # Voorbeeld van een blacklist: deze apps mogen geen ResourceQuota maken.
   namespaceResourceBlacklist:
