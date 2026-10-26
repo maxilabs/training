@@ -43,8 +43,9 @@ spec:
   orphanedResources:
     warn: true
 
-  # Sync-venster: elke nacht 03:00-04:00 geen automatische sync (onderhoud).
-  # Zet in de lab-opdracht de schedule tijdelijk op '* * * * *' om de weigering te zien.
+  # Sync-venster: elke nacht 03:00-04:00 geen sync (onderhoud).
+  # manualSync: false betekent: óók een handmatige sync wordt geweigerd.
+  # Zet in de lab-opdracht de schedule tijdelijk op "* * * * *" om de weigering te zien.
   syncWindows:
     - kind: deny
       schedule: "0 3 * * *"
@@ -52,7 +53,7 @@ spec:
       timeZone: Europe/Amsterdam
       applications:
         - "*"
-      manualSync: true
+      manualSync: false
       clusters:
         - "*"
       namespaces:

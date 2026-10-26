@@ -232,7 +232,8 @@ cmd_image_updater() {
     test)
       log "Welke tag zou de updater kiezen? (alleen kijken, niets schrijven)"
       on_cp "kubectl --namespace=argocd exec deploy/argocd-image-updater-controller -- \
-               argocd-image-updater test nginxinc/nginx-unprivileged --update-strategy semver 2>&1 | tail -12"
+               /manager test nginxinc/nginx-unprivileged --update-strategy semver 2>&1 \
+               | grep --invert-match 'level=debug' | tail -6"
       ;;
     *) die "gebruik: ./argocd.sh image-updater install|test" ;;
   esac
