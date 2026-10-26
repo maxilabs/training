@@ -14,7 +14,7 @@
 #   openbao            OpenBao in dev-modus + Vault-Store + voorbeeldsecret
 #   debug <naam>       waarom is deze ExternalSecret niet Synced?
 #   reset              alle lab-objecten weg (ESO blijft staan)
-#   destroy            óók Key Vault (purge), SP's en namespaces weg
+#   destroy            óók Key Vault (soft-delete; purgen kan niet door policy), SP's en namespaces weg
 #
 # De manifests staan in git; dit script doet alleen wat je niet declaratief kunt:
 # Azure-resources, service principals en het bootstrap-credential in het cluster.
@@ -40,7 +40,6 @@ azs() { az "$@" --subscription "$SECRETS_SUBSCRIPTION_ID"; }
 
 # ── landing zone ──────────────────────────────────────────────────────────────
 cmd_lz() {
-  local payload="${SECRETS_DIR}/../..$(printf '')"
   log "landing zone voor het secrets-lab"
   printf 'subscription : %s\n' "$SECRETS_SUBSCRIPTION_ID"
   printf 'resource group: %s\n' "$SECRETS_RG"
@@ -48,7 +47,7 @@ cmd_lz() {
   echo
   azs group show --name "$SECRETS_RG" --query '{naam:name,locatie:location,status:properties.provisioningState}' -o table 2>&1 || true
   echo
-  log "vnet en subnets (uit de vending machine)"
+  log "vnet en subnets (leeg zolang de landing zone niet is uitgerold)"
   azs network vnet list --resource-group "$SECRETS_RG" --query '[].{naam:name,ruimte:addressSpace.addressPrefixes[0]}' -o table 2>&1 || true
   echo
   log "key vault in deze resource group"

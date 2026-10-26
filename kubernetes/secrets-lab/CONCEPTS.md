@@ -871,7 +871,7 @@ mount, zonder dat er een Kubernetes Secret bestaat.
 - De driver draait per node (DaemonSet): meer bewegende delen.
 - Veel apps verwachten env-variabelen; dan moet je ze uit het bestand lezen.
 
-**Hangt samen met:** [ESO](#eso) · [ALTERNATIVES](ALTERNATIVES.md#csi-driver)
+**Hangt samen met:** [ESO](#eso) · [ALTERNATIVES](ALTERNATIVES.md#secrets-store-csi-driver)
 
 **Bronnen:** [secrets-store-csi-driver](https://secrets-store-csi-driver.sigs.k8s.io/)
 
@@ -917,7 +917,7 @@ cloud-KMS is er geen privésleutel in je cluster.
 **Hoe werkt het:** `sops -e -i secret.yaml` met een `.sops.yaml`-regel per pad; ontsleutelen door de
 ESO-SOPS-provider, Flux of een init-container.
 
-**Zie het zelf:** [ALTERNATIVES](ALTERNATIVES.md#sops).
+**Zie het zelf:** [ALTERNATIVES](ALTERNATIVES.md#sops-en-age).
 
 **Valkuilen:**
 - Met age heb je een privésleutel in het cluster (bootstrap-credential); met Azure KMS niet, maar dan hang je
@@ -957,7 +957,7 @@ credentials) en veel auth-methoden. OpenBao geeft je hetzelfde zonder de BSL-bep
 - Zonder persistente opslag en een verzegelprocedure verlies je alles bij een herstart.
 - Dynamische secrets zijn Vaults sterkste punt — en het punt waar Key Vault minder biedt.
 
-**Hangt samen met:** [ESO](#eso) · [ALTERNATIVES](ALTERNATIVES.md#vault)
+**Hangt samen met:** [ESO](#eso) · [ALTERNATIVES](ALTERNATIVES.md#vault-en-openbao)
 
 **Bronnen:** [OpenBao](https://openbao.org/) · [Vault](https://developer.hashicorp.com/vault/docs)
 
@@ -1088,7 +1088,7 @@ alert.
 - Het verlopen van het SP-secret is een Azure-signaal, niet een ESO-metric: monitor ook
   `az ad app credential list` of gebruik certificate-based auth.
 
-**Hangt samen met:** [Foutmodes](#foutmodes) · [Prometheus-stack](../gitops-lab/CONCEPTS.md#prometheus-stack)
+**Hangt samen met:** [Foutmodes](#foutmodes) · [Prometheus-stack](../scripts/kubeadm-lab/CONCEPTS.md#prometheus-stack)
 
 **Bronnen:** [ESO: metrics](https://external-secrets.io/latest/guides/metrics/)
 

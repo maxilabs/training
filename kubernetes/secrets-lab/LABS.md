@@ -544,7 +544,7 @@ ssh ubuntu@192.168.122.11 'kubectl --namespace=secrets-lab get secretstore,exter
 `secretStoreRef` en het pad verschillen.
 
 **Waarschuwing:** dit is dev-modus (alles in geheugen, root-token). Voor productie heb je persistentie,
-`unseal`, policies en Kubernetes-auth nodig. Zie [ALTERNATIVES](ALTERNATIVES.md#openbao).
+`unseal`, policies en Kubernetes-auth nodig. Zie [ALTERNATIVES](ALTERNATIVES.md#vault-en-openbao).
 
 🔗 **Begrippen:** [Vault en OpenBao](CONCEPTS.md#vault-openbao) · [ESO](CONCEPTS.md#eso)
 
@@ -617,7 +617,7 @@ Koppel dit aan de kube-prometheus-stack uit blok 7
 Argo CD-apps.
 
 🔗 **Begrippen:** [Observability](CONCEPTS.md#observability)
-· [Prometheus-stack](../gitops-lab/CONCEPTS.md#prometheus-stack)
+· [Prometheus-stack](../scripts/kubeadm-lab/CONCEPTS.md#prometheus-stack)
 
 ---
 
