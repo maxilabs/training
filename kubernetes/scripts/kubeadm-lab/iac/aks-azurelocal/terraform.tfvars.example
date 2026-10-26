@@ -1,0 +1,7 @@
+# Waarden krijg je van de beheerder van het Azure Local-cluster. Kopieer naar terraform.tfvars (staat in .gitignore).
+resource_group_name    = "rg-azurelocal-cluster01"
+custom_location_name   = "cl-azurelocal-cluster01"
+logical_network_name   = "lnet-k8s"
+location               = "westeurope"
+admin_group_object_ids = ["00000000-0000-0000-0000-000000000000"]
+# control_plane_ip     = "10.0.20.10"

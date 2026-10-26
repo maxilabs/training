@@ -1,0 +1,33 @@
+# Helm-bron: Argo CD rendert de chart zelf (er is geen helm-binary op de node nodig).
+# Voorrang: helm.parameters > helm.valueFiles > values.yaml in de chart.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: helm-demo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: lab
+  source:
+    repoURL: https://github.com/maxilabs/training.git
+    targetRevision: main
+    path: kubernetes/gitops-lab/workloads/helm-demo
+    helm:
+      releaseName: helm-demo
+      valueFiles:
+        - values-lab.yaml
+      parameters:
+        - name: message
+          value: "helm-demo — parameters winnen van valueFiles"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: helm-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

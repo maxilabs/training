@@ -1,0 +1,24 @@
+# Argo CD beheert zijn eigen configuratie: AppProject, RBAC en notificaties.
+# Golf -10: eerst het project en de RBAC, daarna de apps die het project gebruiken.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/maxilabs/training.git
+    targetRevision: main
+    path: kubernetes/gitops-lab/platform
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

@@ -1,0 +1,23 @@
+# Hook: draait vóór de sync begint (nog geen golf, eerst klaar).
+# Let op: een PreSync-hook ziet de nieuwe versie van de workload dus nog niet.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: waves-presync
+  namespace: lab-waves
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: echo
+          image: busybox:1.37
+          command: ["sh", "-c", "echo 'PreSync: ik draai vóór de golfen'; date"]
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi

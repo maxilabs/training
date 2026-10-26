@@ -1,0 +1,3 @@
+# Kopieer naar terraform.tfvars voor handmatig gebruik (staat in .gitignore).
+# De workflow geeft gitops_repo_url mee via de repository-variabele GITOPS_REPO_URL.
+gitops_repo_url = "https://github.com/<jouw-account>/k8s-lab-gitops"

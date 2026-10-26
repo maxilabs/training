@@ -1,0 +1,41 @@
+# Notificaties: Argo CD stuurt een POST naar de echo-ontvanger (workloads/echo) bij een
+# mislukte sync of een ongezonde app. Zo zie je triggers/templates/subscriptions werken
+# zonder SMTP of Slack.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  # Service: waarheen. 'lab' is de naam die je in de subscription als recipient gebruikt.
+  service.webhook.lab: |
+    url: http://echo.lab-observability.svc.cluster.local:8080
+    headers:
+      - name: Content-Type
+        value: application/json
+
+  # Template: de inhoud van het bericht (Go-template over het Application-object).
+  template.app-status: |
+    webhook:
+      lab:
+        method: POST
+        body: |
+          {"app":"{{.app.metadata.name}}","project":"{{.app.spec.project}}","sync":"{{.app.status.sync.status}}","health":"{{.app.status.health.status}}","revision":"{{.app.status.sync.revision}}"}
+
+  # Triggers: wanneer. Condities op het Application-object.
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']
+      send: [app-status]
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-status]
+
+  # Subscriptions: welke app -> welke trigger -> welke service.
+  subscriptions: |
+    - recipients:
+        - lab
+      triggers:
+        - on-sync-failed
+        - on-health-degraded

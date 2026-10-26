@@ -1,0 +1,44 @@
+# Controle bij elke pull request: is alle Terraform-code netjes geformatteerd en geldig, en zijn de
+# shellscripts syntactisch in orde? Draait op een GitHub-runner (geen toegang tot Azure of aristotle nodig).
+# Uitleg: CONCEPTS.md#ci-cd-pipeline
+name: terraform-checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read # alleen code lezen; deze workflow raakt nergens infrastructuur aan
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # laat alle drie de mappen controleren, ook als er één faalt
+      matrix:
+        dir: [iac/lab-libvirt, iac/aks-azure, iac/aks-azurelocal]
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+
+      - name: terraform fmt (opmaak)
+        run: terraform fmt -check -diff -recursive
+
+      # -backend=false: geen state nodig om te valideren, dus ook geen Azure-login
+      - name: terraform init (zonder backend)
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate (syntax en schema van de providers)
+        run: terraform validate
+
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: bash -n op alle scripts (syntaxcontrole, voert niets uit)
+        run: for f in *.sh iac/*/*.sh; do bash -n "$f" && echo "ok  $f"; done

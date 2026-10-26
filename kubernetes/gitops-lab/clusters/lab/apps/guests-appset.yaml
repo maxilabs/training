@@ -1,0 +1,35 @@
+# Eén ApplicationSet maakt de apps voor alle omgevingen die in git staan.
+# De git-files-generator leest workloads/guests/*/config.yaml en maakt per bestand een Application.
+# Een nieuwe omgeving toevoegen = map + config.yaml in git zetten. Geen Application meer met de hand.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: guests
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/maxilabs/training.git
+        revision: main
+        files:
+          - path: kubernetes/gitops-lab/workloads/guests/*/config.yaml
+  template:
+    metadata:
+      name: "{{ .name }}"
+    spec:
+      project: lab
+      source:
+        repoURL: https://github.com/maxilabs/training.git
+        targetRevision: main
+        path: "{{ .sourcePath }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "{{ .namespace }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

@@ -1,0 +1,102 @@
+# Scenario A — VM's van het Terraform-cluster op aristotle, daarna kubeadm met de bestaande scripts.
+# Draait op een SELF-HOSTED runner op aristotle: het libvirt-netwerk (192.168.122.0/24) is van buitenaf
+# niet bereikbaar, dus een GitHub-runner in de cloud kan er niets mee.
+# Uitleg: CONCEPTS.md#self-hosted-runner, INIT.md (blok 8: runner installeren).
+#
+#   pull request  → plan (laat zien wat er zou veranderen)
+#   push naar main → plan + apply + kubeadm-bootstrap
+#   handmatig      → apply of destroy (Actions → lab-libvirt → Run workflow)
+name: lab-libvirt
+
+on:
+  pull_request:
+    paths: ["iac/lab-libvirt/**", ".github/workflows/lab-libvirt.yml"]
+  push:
+    branches: [main]
+    paths: ["iac/lab-libvirt/**", ".github/workflows/lab-libvirt.yml"]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "apply of destroy"
+        type: choice
+        options: [apply, destroy]
+        default: apply
+
+# Nooit twee runs tegelijk op dezelfde VM's en dezelfde state.
+concurrency:
+  group: lab-libvirt
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  # Welke publieke key cloud-init in de VM's zet; de runner logt daarmee in voor de kubeadm-stappen.
+  # Leeg = $HOME/.ssh/id_ed25519.pub van de runner-gebruiker. Anders zet je de repository-variabele SSH_PUBKEY_FILE.
+  SSH_PUBKEY_FILE: ${{ vars.SSH_PUBKEY_FILE }}
+  # Wat moet er gebeuren? plan (PR), apply (push/handmatig) of destroy (handmatig).
+  MODE: ${{ github.event_name == 'pull_request' && 'plan' || (github.event_name == 'workflow_dispatch' && inputs.action) || 'apply' }}
+
+jobs:
+  terraform:
+    # Labels die je bij het registreren van de runner opgeeft (INIT.md).
+    runs-on: [self-hosted, linux, aristotle]
+    defaults:
+      run:
+        working-directory: iac/lab-libvirt
+    steps:
+      - uses: actions/checkout@v7
+
+      # terraform_wrapper: false, zodat 'terraform output -raw' schone tekst geeft.
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      # State buiten de checkout-map, anders ruimt actions/checkout hem bij de volgende run op (zie versions.tf).
+      - name: init (lokale state buiten de repo)
+        run: |
+          STATE="$HOME/.local/state/kubeadm-lab-tf/terraform.tfstate"
+          mkdir -p "$(dirname "$STATE")"
+          terraform init -input=false -backend-config="path=$STATE"
+
+      - name: validate
+        run: terraform fmt -check -recursive && terraform validate
+
+      - name: plan (${{ env.MODE }})
+        run: |
+          DESTROY=""; [ "$MODE" = destroy ] && DESTROY="-destroy"
+          PUB="${SSH_PUBKEY_FILE:-$HOME/.ssh/id_ed25519.pub}"
+          terraform plan -input=false $DESTROY -out=tfplan -var "ssh_public_key=$(cat "$PUB")"
+
+      # Bij destroy: oude SSH-hostkeys vergeten, anders weigert SSH straks de nieuwe VM's op dezelfde IP's.
+      - name: hostkeys opruimen (destroy)
+        if: env.MODE == 'destroy'
+        run: |
+          for ip in $(terraform output -json nodes | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}'); do
+            ssh-keygen -f "$HOME/.ssh/kubeadm-lab_known_hosts" -R "$ip" >/dev/null 2>&1 || true
+          done
+
+      - name: apply
+        if: env.MODE != 'plan'
+        run: terraform apply -input=false tfplan
+
+      # Laag 2: kubeadm op de VM's, met dezelfde scripts als het script-lab (via LAB_ENV).
+      #   prep-nodes.sh  altijd: nieuwe nodes inrichten; op bestaande nodes is het herhaalbaar
+      #                  (en /etc/hosts krijgt zo ook de nieuwe namen)
+      #   cp-init.sh     alleen als er nog geen cluster is: kubeadm init mag maar één keer
+      #   worker-join.sh slaat nodes over die al gejoind zijn
+      - name: kubeadm-bootstrap
+        if: env.MODE == 'apply'
+        working-directory: .
+        run: |
+          terraform -chdir=iac/lab-libvirt output -raw lab_env > "$RUNNER_TEMP/lab-tf.env"
+          export LAB_ENV="$RUNNER_TEMP/lab-tf.env"
+          ./iac/lab-libvirt/wait-nodes.sh
+          ./prep-nodes.sh
+          if bash -c 'source ./lab.env && vm_ssh "$CP_NODE" test -f /etc/kubernetes/admin.conf'; then
+            echo "Cluster bestaat al: kubeadm init overslaan."
+          else
+            ./cp-init.sh
+          fi
+          ./worker-join.sh

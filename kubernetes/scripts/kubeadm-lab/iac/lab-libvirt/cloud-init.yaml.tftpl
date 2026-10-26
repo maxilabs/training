@@ -1,0 +1,15 @@
+#cloud-config
+# Zelfde inrichting als in create-vms.sh: hostname, gebruiker 'ubuntu' met SSH-key en sudo zonder wachtwoord.
+# ${hostname} en ${ssh_public_key} vult Terraform in (templatefile in main.tf).
+hostname: ${hostname}
+fqdn: ${hostname}.lab
+manage_etc_hosts: false
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+packages: [qemu-guest-agent]
+runcmd:
+  - [systemctl, enable, --now, qemu-guest-agent]

@@ -1,0 +1,10 @@
+# Kopieer naar terraform.tfvars voor handmatig gebruik (terraform.tfvars staat in .gitignore).
+# De workflow geeft ssh_public_key zelf mee met -var.
+ssh_public_key = "ssh-ed25519 AAAA... jouw-key"
+
+# Minder RAM als je het script-lab tegelijk wilt laten draaien (32 GB host):
+# nodes = {
+#   "tf-cp1" = { ip = "192.168.122.21", mac = "52:54:00:6b:00:21", vcpu = 2, memory = 3072 }
+#   "tf-w1"  = { ip = "192.168.122.22", mac = "52:54:00:6b:00:22", vcpu = 2, memory = 2048 }
+#   "tf-w2"  = { ip = "192.168.122.23", mac = "52:54:00:6b:00:23", vcpu = 2, memory = 2048 }
+# }

@@ -1,0 +1,7 @@
+# Golf -3: eerst de namespace, daarna pas de rest.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lab-waves
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"

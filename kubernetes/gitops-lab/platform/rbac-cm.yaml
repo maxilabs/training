@@ -1,0 +1,25 @@
+# RBAC van Argo CD zelf: wie mag wat in de UI/CLI.
+# Wordt door de Application 'platform' uit git gesynct (Argo CD beheert zijn eigen config).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  # Iedereen die inlogt en geen regel heeft: alleen lezen.
+  policy.default: role:readonly
+  # scopes: welke claim uit Dex gebruiken we voor 'g, <subject>, <role>'?
+  #   email  -> de SSO-gebruiker (student@lab.local)
+  #   groups -> groepen uit een echte IdP
+  scopes: "[groups, email]"
+  policy.csv: |
+    # De lokale admin (wachtwoord-login) houdt volledige rechten via de built-in rol.
+    # Een specifieke SSO-gebruiker wordt admin:
+    g, student@lab.local, role:admin
+    # Een eigen rol met alleen sync-rechten op apps uit project lab:
+    p, role:lab-deployer, applications, get, lab/*, allow
+    p, role:lab-deployer, applications, sync, lab/*, allow
+    p, role:lab-deployer, applications, action/*, lab/*, allow
+    p, role:lab-deployer, logs, get, lab/*, allow

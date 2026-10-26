@@ -1,0 +1,12 @@
+# Golf -2: de ConfigMap moet er zijn voordat de Pod start.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: waves-html
+  namespace: lab-waves
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+data:
+  index.html: |
+    <h1>waves</h1>
+    <p>Deze pagina is als golf -2 aangemaakt, vóór de Deployment (golf 0).</p>

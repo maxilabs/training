@@ -1,0 +1,3 @@
+# Overlay-waarden voor de lab-omgeving. De Application wijst hier met valueFiles naar.
+replicaCount: 2
+message: "helm-demo — waarden uit values-lab.yaml"

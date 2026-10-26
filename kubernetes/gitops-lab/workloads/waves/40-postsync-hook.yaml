@@ -1,0 +1,29 @@
+# Hook: draait ná de sync én nadat alle resources gezond zijn.
+# De wget naar de Service kan alleen slagen als de Pod écht klaar is: dat is het bewijs
+# dat PostSync pas na de health-check van de workloads draait.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: waves-postsync
+  namespace: lab-waves
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: check
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              echo "PostSync: alle waves klaar, ik test de Service"
+              wget -q -O - http://waves.lab-waves.svc.cluster.local
+          resources:
+            requests:
+              cpu: 5m
+              memory: 8Mi

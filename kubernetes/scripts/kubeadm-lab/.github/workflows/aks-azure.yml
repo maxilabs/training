@@ -1,0 +1,116 @@
+# Scenario B — AKS in Azure met Terraform, ingelogd via OIDC (geen client secret in GitHub).
+# Uitleg: CONCEPTS.md#oidc-federatie, CONCEPTS.md#pull-request-flow, INIT.md (blok 8: bootstrap.sh).
+#
+#   pull request   → plan, resultaat in de job summary            (OIDC-subject: repo:<repo>:pull_request)
+#   push naar main → apply, via environment 'azure'                (OIDC-subject: repo:<repo>:environment:azure)
+#   handmatig      → apply of destroy (kosten: destroy als je klaar bent!)
+name: aks-azure
+
+on:
+  pull_request:
+    paths: ["iac/aks-azure/**", ".github/workflows/aks-azure.yml"]
+  push:
+    branches: [main]
+    paths: ["iac/aks-azure/**", ".github/workflows/aks-azure.yml"]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "apply of destroy"
+        type: choice
+        options: [apply, destroy]
+        default: destroy
+
+concurrency:
+  group: aks-azure
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # mag een OIDC-token van GitHub aanvragen (geeft zelf GEEN rechten in Azure)
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  # De azurerm-provider en -backend lezen deze variabelen. ARM_USE_OIDC: haal zelf het GitHub-token op
+  # en ruil het bij Entra in. ARM_USE_AZUREAD: ook de state-opslag met Entra ID, niet met een storage key.
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"
+  ARM_USE_AZUREAD: "true"
+  TF_VAR_gitops_repo_url: ${{ vars.GITOPS_REPO_URL }}
+  BACKEND: >-
+    -backend-config=storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT }}
+    -backend-config=container_name=tfstate
+    -backend-config=key=aks-azure.tfstate
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iac/aks-azure
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: init
+        # $BACKEND bewust zonder quotes: het zijn drie losse -backend-config-argumenten
+        run: |
+          # shellcheck disable=SC2086
+          terraform init -input=false $BACKEND
+
+      - name: validate
+        run: terraform fmt -check -recursive && terraform validate
+
+      # -lock-timeout: wacht even als een andere run de state vasthoudt, in plaats van meteen te falen.
+      - name: plan
+        run: terraform plan -input=false -lock-timeout=5m -no-color -out=tfplan | tee plan.txt
+
+      # Het plan zichtbaar maken op de run-pagina, zodat de reviewer van de PR ziet wat er verandert.
+      - name: plan in de job summary
+        run: |
+          {
+            echo '### terraform plan (aks-azure)'
+            echo '```'
+            grep -E '^(Plan:|No changes|  [#~+-]|Changes to Outputs)' plan.txt || tail -n 30 plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # De environment bepaalt het OIDC-subject (environment:azure) en kan een handmatige goedkeuring eisen.
+    environment: azure
+    defaults:
+      run:
+        working-directory: iac/aks-azure
+    env:
+      MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.action || 'apply' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_wrapper: false
+
+      - name: init
+        # $BACKEND bewust zonder quotes: het zijn drie losse -backend-config-argumenten
+        run: |
+          # shellcheck disable=SC2086
+          terraform init -input=false $BACKEND
+
+      # Opnieuw plannen vlak voor apply: de PR-plan kan verouderd zijn als main intussen veranderde.
+      - name: plan (${{ env.MODE }})
+        run: |
+          DESTROY=""; [ "$MODE" = destroy ] && DESTROY="-destroy"
+          terraform plan -input=false -lock-timeout=5m $DESTROY -out=tfplan
+
+      - name: apply
+        run: terraform apply -input=false -lock-timeout=5m tfplan
+
+      - name: hoe verder
+        if: env.MODE == 'apply'
+        run: |
+          echo "Verbinden: $(terraform output -raw get_credentials)" >> "$GITHUB_STEP_SUMMARY"

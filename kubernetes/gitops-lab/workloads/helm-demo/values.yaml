@@ -1,0 +1,11 @@
+# Standaardwaarden. Argo CD kan deze overschrijven met valueFiles of parameters.
+replicaCount: 1
+
+image:
+  repository: nginx
+  tag: "1.29-alpine"
+
+message: "helm-demo — standaardwaarden uit values.yaml"
+
+service:
+  port: 80

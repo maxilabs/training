@@ -1,0 +1,25 @@
+# Optioneel: deze app faalt met opzet (PreSync-hook exit 1).
+# Bewust buiten clusters/lab/apps, zodat de root-app groen blijft.
+# Aanmaken: kubectl apply -f kubernetes/gitops-lab/clusters/lab/optional/waves-fail.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: waves-fail
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: lab
+  source:
+    repoURL: https://github.com/maxilabs/training.git
+    targetRevision: main
+    path: kubernetes/gitops-lab/workloads/waves-fail
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lab-waves-fail
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

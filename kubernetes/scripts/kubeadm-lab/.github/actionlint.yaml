@@ -1,0 +1,5 @@
+# Configuratie voor actionlint (linter voor GitHub Actions-workflows): het eigen label van de
+# self-hosted runner op aristotle, zodat actionlint dat niet als typfout ziet.
+self-hosted-runner:
+  labels:
+    - aristotle

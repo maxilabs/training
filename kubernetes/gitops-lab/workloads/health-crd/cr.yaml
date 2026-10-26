@@ -1,0 +1,8 @@
+# Custom Resource zonder controller: de status zetten we zelf, om de Lua-health-check te testen.
+apiVersion: labs.maxilabs.dev/v1
+kind: Widget
+metadata:
+  name: demo
+  namespace: lab-health
+spec:
+  size: small

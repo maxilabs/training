@@ -1,0 +1,28 @@
+# Bewijs dat deze niet is uitgerold: de Deployment komt pas na de gefaalde PreSync aan de beurt.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fail-demo
+  namespace: lab-waves-fail
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fail-demo
+  template:
+    metadata:
+      labels:
+        app: fail-demo
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.29-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi

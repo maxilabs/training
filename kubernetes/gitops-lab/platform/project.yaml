@@ -1,0 +1,53 @@
+# AppProject 'lab': de grens van wat de lab-apps mogen.
+# Alles wat hier niet in staat, weigert Argo CD — ook als het in git staat.
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lab
+  namespace: argocd
+spec:
+  description: GitOps-lab (CKA-training)
+
+  # Alleen uit deze repo mag gesynct worden. Een Application met een andere repoURL faalt.
+  sourceRepos:
+    - https://github.com/maxilabs/training.git
+
+  # Waar de apps mogen landen. Namespace-patronen met * zijn toegestaan.
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: web-*
+    - server: https://kubernetes.default.svc
+      namespace: guests-*
+    - server: https://kubernetes.default.svc
+      namespace: lab-*
+    - server: https://kubernetes.default.svc
+      namespace: helm-demo
+
+  # Namespaces zijn cluster-scoped: zonder deze whitelist werkt syncOptions CreateNamespace=true niet.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+
+  # Voorbeeld van een blacklist: deze apps mogen geen ResourceQuota maken.
+  namespaceResourceBlacklist:
+    - group: ""
+      kind: ResourceQuota
+
+  # Waarschuw in de UI als er resources in de namespace staan die niet in git staan.
+  orphanedResources:
+    warn: true
+
+  # Sync-venster: elke nacht 03:00-04:00 geen automatische sync (onderhoud).
+  # Zet in de lab-opdracht de schedule tijdelijk op '* * * * *' om de weigering te zien.
+  syncWindows:
+    - kind: deny
+      schedule: "0 3 * * *"
+      duration: 1h
+      timeZone: Europe/Amsterdam
+      applications:
+        - "*"
+      manualSync: true
+      clusters:
+        - "*"
+      namespaces:
+        - "*"

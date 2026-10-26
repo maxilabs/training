@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: guests-prod
+resources:
+  - ../base
+replicas:
+  - name: guests
+    count: 3
+configMapGenerator:
+  - name: guests-html
+    behavior: replace
+    files:
+      - index.html

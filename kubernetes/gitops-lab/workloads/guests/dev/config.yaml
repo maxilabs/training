@@ -1,0 +1,4 @@
+# Lees dit bestand: de ApplicationSet (git-files-generator) maakt hier één Application per map van.
+name: guests-dev
+namespace: guests-dev
+sourcePath: kubernetes/gitops-lab/workloads/guests/dev

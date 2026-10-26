@@ -1,0 +1,58 @@
+# Golf 0: de workloads.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waves
+  namespace: lab-waves
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: waves
+  template:
+    metadata:
+      labels:
+        app: waves
+    spec:
+      containers:
+        - name: web
+          image: nginx:1.29-alpine
+          ports:
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: html
+          configMap:
+            name: waves-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: waves
+  namespace: lab-waves
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  selector:
+    app: waves
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

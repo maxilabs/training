@@ -1,0 +1,6 @@
+apiVersion: v2
+name: helm-demo
+description: Kleine chart voor de Helm-bron-lab (L-05 in de hoofdvault, G-05 hier)
+type: application
+version: 0.1.0
+appVersion: "1.0"
