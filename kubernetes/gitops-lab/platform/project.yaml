@@ -23,10 +23,13 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: helm-demo
 
-  # Namespaces zijn cluster-scoped: zonder deze whitelist werkt syncOptions CreateNamespace=true niet.
+  # Namespaces en CRD's zijn cluster-scoped: zonder deze whitelist werkt CreateNamespace=true
+  # niet en kan de health-crd-lab zijn eigen CRD niet aanmaken.
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
 
   # Voorbeeld van een blacklist: deze apps mogen geen ResourceQuota maken.
   namespaceResourceBlacklist:

@@ -18,8 +18,8 @@ spec:
     server: https://kubernetes.default.svc
     namespace: lab-waves-fail
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Géén automated sync: met een falende PreSync-hook zou Argo CD bij elke reconcile
+    # opnieuw beginnen (de app blijft OutOfSync, dus automatisch syncen is een lus).
+    # Je start de sync hier dus met de hand: argocd app sync waves-fail
     syncOptions:
       - CreateNamespace=true
