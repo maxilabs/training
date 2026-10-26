@@ -1,6 +1,6 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: demoTijdelijk
+  name: demo-tijdelijk
 data:
   test: "prune-test"
