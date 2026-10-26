@@ -1,0 +1,9 @@
+# Lab G-14: deze resource heeft Prune=false en mag dus nooit automatisch verdwijnen.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tijdelijk
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+data:
+  doel: "blijft staan, ook als hij uit git verdwijnt"

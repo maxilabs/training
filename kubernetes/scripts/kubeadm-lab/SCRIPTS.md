@@ -7,6 +7,7 @@ Overzicht van de documenten:
 - [STUDIEPLAN](STUDIEPLAN.md) — wat je leert en in welke volgorde (leidend).
 - [INIT](INIT.md) — welke stappen je uitvoert om de omgeving op te zetten.
 - **SCRIPTS.md** (dit bestand) — wat de scripts onder water doen.
+- [gitops-lab/SCRIPTS.md](../../gitops-lab/SCRIPTS.md) — het Argo CD-script (blok 7), met dezelfde aanpak.
 
 De Kubernetes-begrippen achter de scripts: [kubeadm init](CONCEPTS.md#kubeadm-init) ·
 [kubeadm join](CONCEPTS.md#kubeadm-join) · [Container runtime en CRI](CONCEPTS.md#container-runtime) ·
@@ -245,6 +246,36 @@ kubeadm token create --print-join-command
 Gebruik: `./addons.sh all`, één add-on (`./addons.sh metallb`) of `./addons.sh status`. Daarna: `./snapshot.sh save addons`.
 
 **Tip:** doe elke add-on eerst een keer met de hand (zie STUDIEPLAN). Gebruik het script als je de add-on alleen *nodig hebt* voor een ander lab.
+
+---
+
+## argocd.sh — Argo CD voor blok 7 (GitOps)
+
+**Wat en wanneer:** zet Argo CD in het cluster en doet de stappen die je niet declaratief kunt doen. De labs zelf
+staan in [gitops-lab/LABS.md](../../gitops-lab/LABS.md); de volledige uitleg per subcommando in
+[gitops-lab/SCRIPTS.md](../../gitops-lab/SCRIPTS.md).
+
+| Commando | Wat het doet |
+|---|---|
+| `install` | namespace `argocd`, de `install.yaml` van de vastgezette versie (`ARGOCD_VERSION` in `lab.env`) met `--server-side`, wachten op de 7 componenten, Service als NodePort, CLI op cp1 |
+| `status` | pods, Applications, ApplicationSets, AppProjects, Service |
+| `url` / `password` | UI-adres en admin-wachtwoord |
+| `login` | `argocd login` (context `lab`) |
+| `bootstrap` | de root-Application toepassen: vanaf hier beheert Argo CD zichzelf |
+| `sso enable\|disable` | Dex met één lokale gebruiker + `url` in `argocd-cm` |
+| `health-crd enable\|disable` | Lua-health-check voor de Widget-CRD (lab G-16) |
+| `image-updater install\|test` | optionele image updater + een registry-query (lab G-17) |
+| `cluster add\|list\|rm` | tweede cluster registreren (lab G-15) |
+| `reset` | alle lab-apps en -namespaces weg, Argo CD blijft |
+| `uninstall` | Argo CD volledig weg (namespace + CRD's) |
+
+**Waarom een script en geen Application?** Een Application kan zichzelf niet installeren en een NodePort niet
+aanmaken zonder dat Argo CD er al is. Alles wat *daarna* kan, staat in git (`gitops-lab/clusters/` en
+`platform/`). Het script is de handen, git is de bron.
+
+**Wat je hiervan moet kennen voor het examen/gesprek:** de installatiestappen, waarom `--server-side` nodig is
+(CRD's zijn te groot voor de `last-applied`-annotatie), dat `argocd-server` zelf TLS doet op 8080, en dat
+`argocd-initial-admin-secret` je eerste wachtwoord bevat.
 
 ---
 

@@ -488,7 +488,9 @@ eigen cluster (open source, geen SaaS). Werk vanaf een eigen snapshot, zodat je 
 - **GitOps:** de gewenste toestand staat declaratief in git; een agent in het cluster haalt die op en houdt het
   cluster er continu gelijk aan (ook als iemand met de hand iets verandert: *drift*).
 - **Argo CD:** GitOps-tool met web-UI. Een `Application` zegt: "deze map in deze repo hoort in deze namespace".
-  Toont *Synced/OutOfSync* en *Healthy/Degraded* voor de resources die het beheert.
+  Toont *Synced/OutOfSync* en *Healthy/Degraded* voor de resources die het beheert. De volledige set begrippen
+  (reconciliatie, sync-policy, AppProject, ApplicationSet, hooks, SSO, ...) staat in
+  [gitops-lab/CONCEPTS.md](../../gitops-lab/CONCEPTS.md).
 - **Flux:** GitOps-tool zonder standaard-UI, opgebouwd uit controllers (bron ophalen → toepassen). Zelfde idee, andere bediening.
 - **Monitoring vs metrics-server:** metrics-server geeft alleen actuele CPU/geheugen (voor `kubectl top`/HPA).
   Echte monitoring = metrics met historie, dashboards en alerts.
@@ -497,38 +499,36 @@ eigen cluster (open source, geen SaaS). Werk vanaf een eigen snapshot, zodat je 
 - **kube-prometheus-stack:** één Helm-chart die dit allemaal installeert, inclusief kant-en-klare dashboards en alertregels.
 
 **Labs**
-- **L-24 — Argo CD installeren en de UI openen** (op cp1)
+- **G-01 t/m G-18 — GitOps met Argo CD** → [gitops-lab/LABS.md](../../gitops-lab/LABS.md)
+
+  De Argo CD-labs zijn een eigen reeks geworden, met eigen begrippen en een eigen script. Argo CD draait als
+  containers in **ditzelfde** cluster en leest de manifests uit deze repo, dus je oefent op je eigen omgeving:
+
+  | Labs | Wat |
+  |---|---|
+  | [G-01](../../gitops-lab/LABS.md#g-01) | installeren, UI openen, CLI |
+  | [G-02](../../gitops-lab/LABS.md#g-02) · [G-03](../../gitops-lab/LABS.md#g-03) | eerste Application, sync, drift, prune, selfHeal |
+  | [G-04](../../gitops-lab/LABS.md#g-04) · [G-05](../../gitops-lab/LABS.md#g-05) | Kustomize-overlays en een Helm-bron |
+  | [G-06](../../gitops-lab/LABS.md#g-06) · [G-07](../../gitops-lab/LABS.md#g-07) | sync waves, hooks (PreSync/PostSync/SyncFail) |
+  | [G-08](../../gitops-lab/LABS.md#g-08) · [G-09](../../gitops-lab/LABS.md#g-09) | app-of-apps, ApplicationSet |
+  | [G-10](../../gitops-lab/LABS.md#g-10) · [G-11](../../gitops-lab/LABS.md#g-11) | AppProject + sync-venster, RBAC + SSO via Dex |
+  | [G-12](../../gitops-lab/LABS.md#g-12) · [G-13](../../gitops-lab/LABS.md#g-13) | notificaties, rollback en git revert |
+  | [G-14](../../gitops-lab/LABS.md#g-14) · [G-15](../../gitops-lab/LABS.md#g-15) | ignoreDifferences, tweede cluster |
+  | [G-16](../../gitops-lab/LABS.md#g-16) · [G-17](../../gitops-lab/LABS.md#g-17) | eigen health-check (Lua), image updater |
+  | [G-18](../../gitops-lab/LABS.md#g-18) | disaster recovery: alles uit git opnieuw |
+
   ```bash
-  kubectl create namespace argocd
-  kubectl apply --namespace=argocd --server-side --force-conflicts \
-    --filename=https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-  kubectl --namespace=argocd get secret argocd-initial-admin-secret --output=jsonpath='{.data.password}' | base64 --decode; echo
-  kubectl --namespace=argocd port-forward svc/argocd-server 8080:443
+  cd ~/kubernetes/scripts/kubeadm-lab
+  ./argocd.sh install      # Argo CD v3.5.6 + NodePort + argocd-CLI op cp1
+  ./argocd.sh login
+  ./argocd.sh bootstrap    # de root-Application: Argo CD neemt het over
   ```
-  Vanaf aristotle: `ssh -L 8080:localhost:8080 ubuntu@192.168.122.11` en open https://localhost:8080
-  (gebruiker `admin`, self-signed certificaat). Wijzig daarna het wachtwoord en verwijder het initial-admin-secret.
 
-  🔗 **Begrippen:** [Argo CD](CONCEPTS.md#argo-cd) · [GitOps](CONCEPTS.md#gitops)
-- **L-25 — GitOps in de praktijk** (met een eigen GitHub-repo, bijv. `k8s-lab-gitops`)
-  1. Zet een Deployment + Service in `apps/web/` in je repo.
-  2. Maak een Argo CD-`Application` (zelf ook als YAML in git):
-     ```yaml
-     apiVersion: argoproj.io/v1alpha1
-     kind: Application
-     metadata: {name: web, namespace: argocd}
-     spec:
-       project: default
-       source: {repoURL: https://github.com/<jij>/k8s-lab-gitops.git, path: apps/web, targetRevision: main}
-       destination: {server: https://kubernetes.default.svc, namespace: web}
-       syncPolicy:
-         automated: {prune: true, selfHeal: true}
-         syncOptions: [CreateNamespace=true]
-     ```
-  3. Wijzig `replicas` in git → het cluster volgt vanzelf.
-  4. **Drift-test:** `kubectl scale deployment web --replicas=1 --namespace=web` → Argo CD zet het terug (door `selfHeal`).
-  5. Verwijder een bestand uit git → de resource verdwijnt uit het cluster (door `prune`).
+  Zie ook [gitops-lab/README.md](../../gitops-lab/README.md) (snelstart) en
+  [gitops-lab/SCRIPTS.md](../../gitops-lab/SCRIPTS.md) (wat het script onder water doet).
 
-  🔗 **Begrippen:** [GitOps](CONCEPTS.md#gitops) · [Argo CD](CONCEPTS.md#argo-cd)
+  🔗 **Begrippen:** [GitOps](../../gitops-lab/CONCEPTS.md#gitops) · [Applicatie](../../gitops-lab/CONCEPTS.md#applicatie) ·
+  [Sync-policy](../../gitops-lab/CONCEPTS.md#sync-policy) · [Argo CD in de vault](CONCEPTS.md#argo-cd)
 - **L-26 — Monitoring met kube-prometheus-stack** (Helm uit L-05 nodig)
   ```bash
   helm install mon oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \

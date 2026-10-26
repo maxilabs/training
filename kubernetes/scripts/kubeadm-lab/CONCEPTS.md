@@ -38,6 +38,10 @@ Lees het begrip, doe dan de kleine praktische stap, en lees de bronnen op het mo
 
 **Blok 7 — Platform: GitOps en monitoring:** [GitOps](CONCEPTS.md#gitops) ✅ · [Argo CD](CONCEPTS.md#argo-cd) ✅ · [Flux](CONCEPTS.md#flux) ✅ · [Prometheus, Grafana en kube-prometheus-stack](CONCEPTS.md#prometheus-stack) ✅
 
+**Blok 7, GitOps in detail:** de begrippen die alleen bij Argo CD horen (reconciliatie, drift, sync-policy,
+AppProject, ApplicationSet, sync waves, hooks, SSO, notificaties, rollback, meerdere clusters, ...) staan in
+[gitops-lab/CONCEPTS.md](../../gitops-lab/CONCEPTS.md), met de labs in [gitops-lab/LABS.md](../../gitops-lab/LABS.md).
+
 **Blok 8 — IaC en CI/CD: clusters en resources uitrollen:** [Het lagenmodel: wat doet IaC en wat doet GitOps](CONCEPTS.md#iac-lagen) ✅ · [Terraform: infrastructuur als code](CONCEPTS.md#terraform) ✅ · [Terraform-state en remote state](CONCEPTS.md#terraform-state) ✅ · [CI/CD-pipeline met GitHub Actions](CONCEPTS.md#ci-cd-pipeline) ✅ · [De pull-request-flow: plan op PR, apply na merge](CONCEPTS.md#pull-request-flow) ✅ · [OIDC-federatie: GitHub logt in bij Azure zonder secret](CONCEPTS.md#oidc-federatie) ✅ · [Self-hosted runner](CONCEPTS.md#self-hosted-runner) ✅ · [Push (CI/CD) vs pull (GitOps)](CONCEPTS.md#push-vs-pull) ✅ · [AKS: Azure Kubernetes Service](CONCEPTS.md#aks) ✅ · [AKS op Azure Local (AKS Arc)](CONCEPTS.md#aks-arc) ✅
 
 **Kubestronaut (CKAD, CKS):** [Pod Security Standards en Pod Security Admission](CONCEPTS.md#pod-security-admission) ✅ · [Admission control: controllers, policies en webhooks](CONCEPTS.md#admission-control) ✅ · [Downward API en projected volumes](CONCEPTS.md#downward-api) ✅ · [Vertical Pod Autoscaler en in-place resize](CONCEPTS.md#vpa-inplace-resize) ✅ · [Encryption at rest en KMS](CONCEPTS.md#encryption-at-rest) ✅ · [Audit logging](CONCEPTS.md#audit-logging) ✅ · [API-groepen, versies en deprecaties](CONCEPTS.md#api-versies) ✅
@@ -3256,7 +3260,8 @@ flowchart LR
 | `syncPolicy.automated` | automatisch syncen; `prune` verwijdert wat uit git verdween, `selfHeal` zet drift terug |
 | sync waves | volgorde via de annotatie `argocd.argoproj.io/sync-wave` |
 
-**Zie het zelf:** STUDIEPLAN L-24 en L-25, en:
+**Zie het zelf:** de labs [G-01 t/m G-18](../../gitops-lab/LABS.md) (installeren, sync, drift, app-of-apps,
+ApplicationSet, SSO, ...), en:
 ```bash
 kubectl --namespace=argocd get applications
 kubectl --namespace=argocd get pods
@@ -3264,6 +3269,8 @@ kubectl --namespace=argocd get pods
 
 **Valkuilen en examentips:**
 - Zonder `selfHeal` meldt Argo CD drift alleen (OutOfSync), maar zet hij niets terug.
+- De diepere begrippen (sync waves, hooks, AppProject, ApplicationSet, RBAC) staan in
+  [gitops-lab/CONCEPTS.md](../../gitops-lab/CONCEPTS.md).
 - Secrets niet laten invullen via een plugin tijdens het renderen: die komen in plaintext in de Redis-cache. Gebruik External Secrets in het cluster.
 
 **Hangt samen met:** [GitOps](CONCEPTS.md#gitops) · [Flux](CONCEPTS.md#flux) · [CRD en CR (Custom Resource)](CONCEPTS.md#crd-cr)

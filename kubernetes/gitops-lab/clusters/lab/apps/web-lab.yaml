@@ -13,6 +13,12 @@ spec:
     repoURL: https://github.com/maxilabs/training.git
     targetRevision: main
     path: kubernetes/gitops-lab/workloads/web/overlays/lab
+  # ignoreDifferences: 'replicas' telt niet mee bij de vergelijking (lab G-14).
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
   destination:
     server: https://kubernetes.default.svc
     namespace: web-lab
