@@ -1,0 +1,3 @@
+name: guests-acc
+namespace: guests-acc
+sourcePath: kubernetes/gitops-lab/workloads/guests/acc

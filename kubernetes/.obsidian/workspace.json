@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "gitops-lab/SCRIPTS.md",
+                "file": "gitops-lab/LABS.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "SCRIPTS"
+              "title": "LABS"
             }
           }
         ]
@@ -190,6 +190,9 @@
   },
   "active": "3f809984585b88ea",
   "lastOpenFiles": [
+    "gitops-lab/CONCEPTS.md",
+    "gitops-lab/SCRIPTS.md",
+    "gitops-lab/workloads/web/base/sed0CgKHA",
     "gitops-lab/README.md",
     "gitops-lab/workloads/web/base/tijdelijk.yaml",
     "scripts/kubeadm-lab/STUDIEPLAN.md",
@@ -211,7 +214,6 @@
     "scripts/kubeadm-lab/iac/lab-libvirt/versions.tf",
     "scripts/kubeadm-lab/iac/lab-libvirt/variables.tf",
     "scripts/kubeadm-lab/iac/lab-libvirt/terraform.tfvars.example",
-    "scripts/kubeadm-lab/iac/lab-libvirt/outputs.tf",
     "docs/INIT.md",
     "docs/CONCEPTS.md",
     "docs/STUDIEPLAN.md",

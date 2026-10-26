@@ -480,7 +480,9 @@ ssh ubuntu@192.168.122.11 'argocd app sync web-lab'
 ```
 
 **Verificatie**
-- Stap 2: `namespace kube-system is not permitted in project lab` — de sync gebeurt niet. (Opruimen:
+- Stap 2: de app krijgt meteen `InvalidSpecError`:
+  `application destination server '...' and namespace 'kube-system' do not match any of the allowed destinations
+  in project 'lab'`. De sync gebeurt dus niet — geen enkele resource wordt aangeraakt. (Opruimen:
   `argocd app delete buiten-de-grens --cascade=orphan`.)
 - Stap 3: `cannot sync: blocked by sync window`. Zet de schedule terug en push; de app herstelt zichzelf.
 
@@ -609,32 +611,67 @@ ssh ubuntu@192.168.122.11 'argocd app sync web-lab'
 **Doel:** De drie knoppen voor "dit verschil is geen fout" en "deze resource mag blijven".
 
 **Stappen**
-1. **ignoreDifferences** — haal `replicas` uit de vergelijking:
+
+1. **ignoreDifferences** — haal `replicas` uit de vergelijking. In dit lab beheert de root-app de Application,
+   dus je past hem aan **in git** (live patchen wordt teruggezet — dat is de les van G-08):
 ```bash
-ssh ubuntu@192.168.122.11 "argocd app patch web-lab --type merge --patch '{\"spec\":{\"ignoreDifferences\":[{\"group\":\"apps\",\"kind\":\"Deployment\",\"jsonPointers\":[\"/spec/replicas\"]}]}}'"
+cd ~/kubernetes/gitops-lab/clusters/lab/apps
+python3 - <<'EOF'
+import pathlib
+p = pathlib.Path('web-lab.yaml'); s = p.read_text()
+s = s.replace("  destination:\n", """  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+  destination:
+""")
+p.write_text(s)
+EOF
+git -C ~/kubernetes commit -am "web-lab: replicas niet vergelijken" && git -C ~/kubernetes push
+ssh ubuntu@192.168.122.11 'argocd app sync root && argocd app sync web-lab'
 ssh ubuntu@192.168.122.11 'kubectl --namespace=web-lab scale deployment web --replicas=1'
 sleep 30
 ssh ubuntu@192.168.122.11 'kubectl --namespace=web-lab get deploy web -o jsonpath="{.spec.replicas}"; echo'
 ```
 2. **Prune=false** — een resource die je nooit automatisch wilt verwijderen:
 ```bash
-kubectl --namespace=web-lab annotate configmap web-html argocd.argoproj.io/sync-options=Prune=false
+cd ~/kubernetes/gitops-lab/workloads/web/base
+cat > tijdelijk.yaml <<'EOF'
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tijdelijk
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false
+data:
+  doel: "blijft staan, ook als hij uit git verdwijnt"
+EOF
+sed -i 's/  - configmap.yaml/  - configmap.yaml\n  - tijdelijk.yaml/' kustomization.yaml
+git -C ~/kubernetes commit -am "tijdelijk met Prune=false" && git -C ~/kubernetes push
+ssh ubuntu@192.168.122.11 'argocd app sync web-lab'
+# nu uit git halen:
+rm tijdelijk.yaml && sed -i '/  - tijdelijk.yaml/d' kustomization.yaml
+git -C ~/kubernetes commit -am "tijdelijk weg uit git" && git -C ~/kubernetes push
+ssh ubuntu@192.168.122.11 'argocd app sync web-lab'
 ```
-(En dan de ConfigMap uit git halen: hij blijft staan. Daarna zelf opruimen.)
 3. **ServerSideApply** — bekijk `clusters/lab/optional/health-crd.yaml`: daar staat het aan, omdat CRD's te groot
    zijn voor de client-side apply-annotatie.
 
 **Verificatie**
-- Stap 1: de replicas blijven `1` en de app blijft `Synced`. Zonder `ignoreDifferences` zet `selfHeal` hem terug.
-- Stap 2: de ConfigMap blijft bestaan terwijl hij niet meer in git staat.
+- Stap 1: de replicas blijven `1` en de app blijft `Synced`. Zonder `ignoreDifferences` zet `selfHeal` hem terug
+  (probeer dat eerst, in G-03).
+- Stap 2: de sync meldt `ignored (requires pruning)` en de ConfigMap blijft bestaan. Opruimen:
+  `kubectl --namespace=web-lab delete configmap tijdelijk`.
 
 **Valkuilen**
 - `ignoreDifferences` verbergt een echt meningsverschil (HPA versus git). Documenteer waarom de regel er is.
 - `Replace=true` lost een vastgelopen apply op met een korte onderbreking; het is geen standaardinstelling.
-- In dit lab verdwijnt je live-wijziging bij de volgende reconciliatie omdat de root-app de Application beheert.
+- Live patchen van een Application die door de root-app wordt beheerd, wordt bij de volgende reconciliatie
+  teruggezet. Wijzig in git.
 
 🔗 **Begrippen:** [ignoreDifferences](CONCEPTS.md#ignoredifferences) · [Prune](CONCEPTS.md#prune) ·
-[Drift](CONCEPTS.md#drift)
+[Drift](CONCEPTS.md#drift) · [App-of-apps](CONCEPTS.md#app-of-apps)
 
 ---
 
