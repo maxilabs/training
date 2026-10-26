@@ -80,4 +80,4 @@ Zo kun je dezelfde workload in twee clusters of omgevingen gebruiken.
 - De labs die je zelf aanzet (`clusters/lab/optional/`) staan bewust buiten `clusters/lab/apps/`,
   zodat de root-app groen blijft als zo'n lab met opzet faalt.
 - Na een lab: `./argocd.sh reset` en je begint weer schoon. Argo CD zelf blijft staan.
-- Werk je vanaf een snapshot? Maak eerst `./snapshot.sh save calico-ready`-state, dan kun je altijd terug.
+- Werk je vanaf een snapshot? Maak eerst een snapshot van de huidige staat (`./snapshot.sh save calico-ready`), dan kun je altijd terug.
