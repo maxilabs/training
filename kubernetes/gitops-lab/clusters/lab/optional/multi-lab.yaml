@@ -1,0 +1,26 @@
+# Optioneel: dezelfde workload, maar naar een geregistreerd (extern) cluster.
+# Vereist: ./argocd.sh cluster add  (dan bestaat de destination 'lab-external' in het project)
+# Aanmaken: kubectl apply -f kubernetes/gitops-lab/clusters/lab/optional/multi-lab.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: multi-lab
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: lab
+  source:
+    repoURL: https://github.com/maxilabs/training.git
+    targetRevision: main
+    path: kubernetes/gitops-lab/workloads/web/base
+  destination:
+    # Let op: een cluster-NAAM in plaats van een server-URL. Argo CD zoekt het cluster-secret.
+    name: lab-external
+    namespace: multi-lab
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

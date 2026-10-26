@@ -13,7 +13,10 @@ spec:
     - https://github.com/maxilabs/training.git
 
   # Waar de apps mogen landen. Namespace-patronen met * zijn toegestaan.
+  # 'lab-external' bestaat pas nadat je hem met ./argocd.sh cluster add hebt geregistreerd.
   destinations:
+    - name: lab-external
+      namespace: multi-lab
     - server: https://kubernetes.default.svc
       namespace: web-*
     - server: https://kubernetes.default.svc

@@ -243,14 +243,16 @@ cmd_cluster() {
   local action="${1:-}"
   case "$action" in
     add)
-      # Geen tweede cluster bij de hand? We registreren dezelfde API-server via een ander
-      # adres (127.0.0.1). Argo CD ziet dat als een apart cluster: de mechanica is identiek.
-      log "cluster 'lab-external' registreren (server https://127.0.0.1:6443)"
+      # Geen tweede cluster bij de hand? We registreren dezelfde API-server onder een andere
+      # URL (het node-IP in plaats van kubernetes.default.svc). Argo CD ziet dat als een
+      # apart cluster, dus alle mechanica (cluster-secret, service account, destination)
+      # is identiek aan een echt tweede cluster.
+      log "cluster 'lab-external' registreren (server https://$(node_ip "$CP_NODE"):6443)"
       on_cp "sudo cp /etc/kubernetes/admin.conf /tmp/argocd-external.conf
              sudo chown \$(id -un) /tmp/argocd-external.conf
-             sed -i 's#server: https://.*#server: https://127.0.0.1:6443#' /tmp/argocd-external.conf
+             sed -i 's#server: https://.*#server: https://$(node_ip "$CP_NODE"):6443#' /tmp/argocd-external.conf
              argocd cluster add kubernetes-admin@kubernetes --name lab-external \
-               --kubeconfig /tmp/argocd-external.conf 2>&1 | tail -3
+               --kubeconfig /tmp/argocd-external.conf --upsert --yes 2>&1 | tail -2
              argocd cluster list"
       log "Vergeet niet de destination in platform/project.yaml te zetten (git + push)"
       ;;
