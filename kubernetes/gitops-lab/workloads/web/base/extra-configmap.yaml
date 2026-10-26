@@ -1,6 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: demo-tijdelijk
-data:
-  test: "prune-test"
