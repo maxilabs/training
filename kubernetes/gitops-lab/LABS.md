@@ -427,7 +427,8 @@ namespace: guests-acc
 sourcePath: kubernetes/gitops-lab/workloads/guests/acc
 EOF
 sed 's/guests-dev/guests-acc/' ../dev/kustomization.yaml > kustomization.yaml
-git -C ~/kubernetes add . && git -C ~/kubernetes commit -m "guests: acceptatie-omgeving" && git -C ~/kubernetes push
+git -C ~/kubernetes add gitops-lab/workloads/guests/acc
+git -C ~/kubernetes commit -m "guests: acceptatie-omgeving" && git -C ~/kubernetes push
 ```
 
 **Verificatie**
@@ -435,8 +436,16 @@ git -C ~/kubernetes add . && git -C ~/kubernetes commit -m "guests: acceptatie-o
 ssh ubuntu@192.168.122.11 'argocd app list | grep guests'
 ssh ubuntu@192.168.122.11 'kubectl --namespace=guests-acc get deploy,pods'
 ```
-Vier apps, zonder dat je er één met de hand hebt gemaakt. Verwijder de map (`git rm -r`): de Application verdwijnt
-en met `prune` ook de resources.
+Vier apps, zonder dat je er één met de hand hebt gemaakt.
+
+**Geduld:** de generator pollt de repo net als de rest (elke ~3 min) en houdt een cache bij; het kan dus een paar
+minuten duren voordat `guests-acc` verschijnt. Kijken of de generator het gezien heeft:
+```bash
+ssh ubuntu@192.168.122.11 'kubectl --namespace=argocd get appset guests -o jsonpath="{.status.conditions[*].message}"; echo'
+```
+
+Verwijder de map (`git rm -r gitops-lab/workloads/guests/acc`, commit, push): de Application verdwijnt en met
+`prune` ook de resources in `guests-acc`.
 
 **Valkuilen**
 - `goTemplate: true` betekent `{{ .naam }}` met spaties; zonder die optie is het `{{naam}}`.
